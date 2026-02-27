@@ -65,7 +65,6 @@ export async function exportMonthToExcel(doc: MonthDoc, childNames: string[]): P
   const dataStartRow = 3
   const totalHoursPerDay: number[] = []
   const sumsPerChild = names.map(() => 0)
-  const countPerChild = names.map(() => 0)
 
   for (let i = 0; i < dates.length; i++) {
     const d = dates[i]
@@ -82,7 +81,6 @@ export async function exportMonthToExcel(doc: MonthDoc, childNames: string[]): P
       const h = minutesToHours(shiftDurationMinutes(s))
       hoursPerColumn[col] += h
       sumsPerChild[col] += h
-      countPerChild[col] += 1
     }
     totalHoursPerDay.push(hoursPerColumn.reduce((a, b) => a + b, 0))
 
@@ -91,7 +89,7 @@ export async function exportMonthToExcel(doc: MonthDoc, childNames: string[]): P
     row.values = [`Tuần ${weekNum}`, d.getDate(), DAY_NAMES_VI[getDay(d)], ...hoursPerColumn, notes]
     row.getCell(colNgày).numFmt = '0'
     for (let c = 0; c < names.length; c++) {
-      row.getCell(colFirstChild + c).numFmt = '0.00'
+      row.getCell(colFirstChild + c).numFmt = '0.0'
     }
 
     if (shifts.length > 0) {
@@ -126,7 +124,7 @@ export async function exportMonthToExcel(doc: MonthDoc, childNames: string[]): P
   for (let c = 0; c < names.length; c++) {
     const cell = ws.getCell(sumRow1, colFirstChild + c)
     cell.value = sumsPerChild[c]
-    cell.numFmt = '0.00'
+    cell.numFmt = '0.0'
     cell.fill = {
       type: 'pattern',
       pattern: 'solid',
@@ -135,12 +133,12 @@ export async function exportMonthToExcel(doc: MonthDoc, childNames: string[]): P
   }
 
   const sumRow1b = sumRow1 + 1
-  ws.getCell(sumRow1b, colTuần).value = 'SỐ CA MỖI TRẺ:'
+  ws.getCell(sumRow1b, colTuần).value = 'SỐ CA MỖI TRẺ (1 ca = 1 giờ):'
   ws.getCell(sumRow1b, colTuần).font = { bold: true }
   for (let c = 0; c < names.length; c++) {
     const cell = ws.getCell(sumRow1b, colFirstChild + c)
-    cell.value = countPerChild[c]
-    cell.numFmt = '0'
+    cell.value = sumsPerChild[c]
+    cell.numFmt = '0.0'
     cell.fill = {
       type: 'pattern',
       pattern: 'solid',
@@ -155,7 +153,7 @@ export async function exportMonthToExcel(doc: MonthDoc, childNames: string[]): P
   ws.mergeCells(sumRow2, colNgày, sumRow2, colFirstChild + names.length - 1)
   const totalCell = ws.getCell(sumRow2, colNgày)
   totalCell.value = totalMonth
-  totalCell.numFmt = '0.00'
+  totalCell.numFmt = '0.0'
   totalCell.fill = {
     type: 'pattern',
     pattern: 'solid',
@@ -169,7 +167,7 @@ export async function exportMonthToExcel(doc: MonthDoc, childNames: string[]): P
   for (let c = 0; c < names.length; c++) ws.getColumn(colFirstChild + c).width = 12
   ws.getColumn(colGhiChú).width = 28
 
-  // --- Sheet 2: Chi tiết ca (giữ nguyên) ---
+  // --- Sheet 2: Chi tiết ca ---
   const wsDetail = wb.addWorksheet('Chi tiết', { views: [{ state: 'frozen', ySplit: 1 }] })
   wsDetail.columns = [
     { header: 'Ngày', key: 'date', width: 12 },
@@ -177,6 +175,7 @@ export async function exportMonthToExcel(doc: MonthDoc, childNames: string[]): P
     { header: 'Kết thúc', key: 'end', width: 10 },
     { header: 'Nghỉ (phút)', key: 'break', width: 12 },
     { header: 'Giờ', key: 'hours', width: 10 },
+    { header: 'Số ca (1 ca=1h)', key: 'ca', width: 12 },
     { header: 'Loại', key: 'type', width: 12 },
     { header: 'Ghi chú', key: 'note', width: 28 },
   ]
@@ -200,10 +199,13 @@ export async function exportMonthToExcel(doc: MonthDoc, childNames: string[]): P
         end: s.end,
         break: s.breakMinutes ?? 0,
         hours,
+        ca: hours,
         type: SHIFT_TYPE_LABELS[s.type],
         note: s.note || '',
       })
       const row = wsDetail.getRow(detailRowIndex)
+      row.getCell(5).numFmt = '0.0'
+      row.getCell(6).numFmt = '0.0'
       row.eachCell((cell) => {
         cell.fill = {
           type: 'pattern',
