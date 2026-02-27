@@ -83,8 +83,8 @@ export function MonthView({ doc, onSelectDay }: MonthViewProps) {
         </div>
       </div>
 
-      {/* Lịch tháng */}
-      <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+      {/* Lịch tháng - gap rõ ràng cho mobile iPhone */}
+      <div className="grid grid-cols-7 gap-2 min-[480px]:gap-3">
         {weekDays.map((w) => (
           <div
             key={w}
@@ -95,7 +95,7 @@ export function MonthView({ doc, onSelectDay }: MonthViewProps) {
         ))}
         {gridDays.map((d, i) => {
           if (d == null) {
-            return <div key={`pad-${i}`} className="aspect-square min-h-0" />
+            return <div key={`pad-${i}`} className="w-full aspect-square min-h-0" />
           }
           const key = dateKey(d)
           const shifts = doc.days[key] ?? []
@@ -113,7 +113,7 @@ export function MonthView({ doc, onSelectDay }: MonthViewProps) {
               type="button"
               onClick={() => onSelectDay(d)}
               className={cn(
-                'aspect-square min-h-[56px] sm:min-h-[68px] flex flex-col items-center justify-center rounded-xl border text-center p-1.5 transition-all duration-200 active:scale-[0.98]',
+                'w-full min-w-0 aspect-square flex flex-col items-center justify-center rounded-xl border text-center p-1.5 transition-all duration-200 active:scale-[0.98]',
                 isSameMonth(d, start)
                   ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 shadow-sm hover:shadow'
                   : 'bg-slate-50/80 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700/50 text-slate-400',
