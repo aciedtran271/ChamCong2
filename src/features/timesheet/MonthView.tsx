@@ -1,7 +1,7 @@
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, getDay, isSameMonth, addMonths, subMonths } from 'date-fns'
 import type { MonthDoc } from '../../types'
 import { dateKey } from '../../types'
-import { totalMinutes, otMinutes, minutesToHours } from './calc'
+import { totalMinutes, otMinutes } from './calc'
 import { formatHours } from '../../lib/utils'
 import { cn } from '../../lib/utils'
 
@@ -21,7 +21,7 @@ export function MonthView({ doc, onSelectDay }: MonthViewProps) {
   const firstDow = getDay(start) // 0 = CN
   const padStart = firstDow
   const padEnd = 42 - days.length - padStart // 6 rows
-  const padStartArr = Array.from({ length: padStart }, (_, i) => null)
+  const padStartArr = Array.from({ length: padStart }, () => null)
   const padEndArr = Array.from({ length: Math.max(0, padEnd) }, () => null)
   const gridDays = [...padStartArr, ...days.map((d) => d), ...padEndArr]
 

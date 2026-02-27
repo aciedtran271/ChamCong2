@@ -1,6 +1,5 @@
 import { format } from 'date-fns'
 import type { Shift } from '../../types'
-import { dateKey } from '../../types'
 import { shiftDurationMinutes, otMinutes, totalMinutes, SHIFT_TYPE_LABELS } from './calc'
 import { formatHours } from '../../lib/utils'
 import { cn } from '../../lib/utils'

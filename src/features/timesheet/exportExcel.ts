@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs'
 import { format, getDay } from 'date-fns'
-import type { MonthDoc, Shift } from '../../types'
+import type { MonthDoc } from '../../types'
 import { dateKey } from '../../types'
 import {
   shiftDurationMinutes,
