@@ -10,6 +10,10 @@ import {
   SHIFT_TYPE_LABELS,
 } from './calc'
 
+const TITLE_PREFIX = 'AN HY'
+const CHILD_NAMES = ['Bi', 'Phú Quý', 'Khôi', 'Bo']
+const DAY_NAMES_VI = ['CN', 'Hai', 'Ba', 'Tư', 'Năm', 'Sáu', 'Bảy'] // 0=CN, 1=Hai, ...
+
 function allDatesInMonth(year: number, month: number): Date[] {
   const first = new Date(year, month - 1, 1)
   const last = new Date(year, month, 0)
@@ -24,56 +28,142 @@ export async function exportMonthToExcel(doc: MonthDoc): Promise<Blob> {
   const wb = new ExcelJS.Workbook()
   wb.creator = 'ChamCong App'
 
-  // Sheet 1: Tổng hợp tháng
-  const wsSummary = wb.addWorksheet('Tổng hợp', { views: [{ state: 'frozen', ySplit: 1 }] })
-  wsSummary.columns = [
-    { header: 'Ngày', key: 'date', width: 12 },
-    { header: 'Thứ', key: 'dayOfWeek', width: 10 },
-    { header: 'Tổng giờ', key: 'totalHours', width: 12 },
-    { header: 'OT (giờ)', key: 'otHours', width: 10 },
-    { header: 'Số ca', key: 'shiftCount', width: 8 },
-    { header: 'Ghi chú', key: 'notes', width: 30 },
-  ]
-  const headerRow = wsSummary.getRow(1)
+  const year = doc.year
+  const month = doc.month
+  const monthName = ['', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'][month]
+  const dates = allDatesInMonth(year, month)
+  const numDays = dates.length
+
+  // --- Sheet 1: Bảng chấm công theo mẫu AN HY ---
+  const ws = wb.addWorksheet('Chấm công', { views: [{ state: 'frozen', ySplit: 2 }] })
+
+  // Cột: A=Tuần, B=Ngày, C=Thứ, D=Bi, E=Phú Quý, F=Khôi, G=Bo, H=Ghi chú
+  const colTuần = 1
+  const colNgày = 2
+  const colThứ = 3
+  const colFirstChild = 4
+  const colGhiChú = 4 + CHILD_NAMES.length // 8
+
+  // Row 1: Tiêu đề
+  const title = `${TITLE_PREFIX} - BẢNG CHẤM CÔNG THÁNG ${monthName} NĂM ${year}`
+  ws.mergeCells(1, 1, 1, colGhiChú)
+  const titleCell = ws.getCell(1, 1)
+  titleCell.value = title
+  titleCell.font = { bold: true, size: 14 }
+  titleCell.alignment = { horizontal: 'center' }
+
+  // Row 2: Header
+  const headerRow = ws.getRow(2)
+  headerRow.values = ['Tuần', 'Ngày', 'Thứ', ...CHILD_NAMES, 'Ghi chú']
   headerRow.font = { bold: true }
   headerRow.fill = {
     type: 'pattern',
     pattern: 'solid',
     fgColor: { argb: 'FFE2E8F0' },
   }
-  const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']
-  const dates = allDatesInMonth(doc.year, doc.month)
-  const summaryHasShifts: boolean[] = []
-  for (const d of dates) {
+
+  // Data rows: mỗi ngày một dòng
+  const dataStartRow = 3
+  const totalHoursPerDay: number[] = []
+  const childColumns = [0, 1, 2, 3] // Bi, Phú Quý, Khôi, Bo - tổng giờ mỗi cột (chỉ cột 0 dùng từ app)
+  const sumsPerChild = [0, 0, 0, 0]
+
+  for (let i = 0; i < dates.length; i++) {
+    const d = dates[i]
     const key = dateKey(d)
     const shifts = doc.days[key] ?? []
-    summaryHasShifts.push(shifts.length > 0)
     const totalM = totalMinutes(shifts)
-    const otM = otMinutes(shifts)
+    const hours = minutesToHours(totalM)
+    totalHoursPerDay.push(hours)
     const notes = shifts.map((s) => s.note).filter(Boolean).join('; ') || ''
-    wsSummary.addRow({
-      date: format(d, 'dd/MM/yyyy'),
-      dayOfWeek: dayNames[getDay(d)],
-      totalHours: minutesToHours(totalM),
-      otHours: minutesToHours(otM),
-      shiftCount: shifts.length,
+
+    // Cột Bi = tổng giờ ngày đó (dữ liệu app); Phú Quý, Khôi, Bo = 0
+    sumsPerChild[0] += hours
+
+    const row = ws.getRow(dataStartRow + i)
+    const weekNum = Math.floor(i / 7) + 1
+    row.values = [
+      `Tuần ${weekNum}`,
+      d.getDate(),
+      DAY_NAMES_VI[getDay(d)],
+      hours,
+      0,
+      0,
+      0,
       notes,
-    })
-  }
-  // Highlight các ngày có ca làm (sheet Tổng hợp)
-  const highlightFill = {
-    type: 'pattern' as const,
-    pattern: 'solid' as const,
-    fgColor: { argb: 'FFE8F5E9' }, // xanh lá nhạt
-  }
-  for (let i = 0; i < summaryHasShifts.length; i++) {
-    if (summaryHasShifts[i]) {
-      const row = wsSummary.getRow(i + 2)
-      row.eachCell((cell) => { cell.fill = highlightFill })
+    ]
+    row.getCell(colNgày).numFmt = '0'
+    row.getCell(colFirstChild).numFmt = '0.00'
+    row.getCell(colFirstChild + 1).numFmt = '0.00'
+    row.getCell(colFirstChild + 2).numFmt = '0.00'
+    row.getCell(colFirstChild + 3).numFmt = '0.00'
+
+    if (shifts.length > 0) {
+      row.eachCell((cell) => {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFE8F5E9' },
+        }
+      })
     }
   }
 
-  // Sheet 2: Chi tiết ca
+  // Gộp ô cột Tuần theo từng tuần (7 ngày = 1 tuần)
+  for (let w = 0; w < Math.ceil(numDays / 7); w++) {
+    const startR = dataStartRow + w * 7
+    const endR = Math.min(dataStartRow + (w + 1) * 7, dataStartRow + numDays) - 1
+    if (startR <= endR) {
+      ws.mergeCells(startR, colTuần, endR, colTuần)
+      const cell = ws.getCell(startR, colTuần)
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFB3E5FC' }, // xanh dương nhạt
+      }
+      cell.alignment = { vertical: 'middle', horizontal: 'center' }
+    }
+  }
+
+  // Dòng tổng: TỔNG GIỜ HỌC MỖI TRẺ
+  const sumRow1 = dataStartRow + numDays
+  ws.getCell(sumRow1, colTuần).value = 'TỔNG GIỜ HỌC MỖI TRẺ:'
+  ws.getCell(sumRow1, colTuần).font = { bold: true }
+  for (let c = 0; c < CHILD_NAMES.length; c++) {
+    const cell = ws.getCell(sumRow1, colFirstChild + c)
+    cell.value = sumsPerChild[c]
+    cell.numFmt = '0.00'
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFC8E6C9' }, // xanh lá nhạt
+    }
+  }
+
+  // Dòng tổng: TỔNG GIỜ LÀM TRONG THÁNG
+  const totalMonth = totalHoursPerDay.reduce((a, b) => a + b, 0)
+  const sumRow2 = sumRow1 + 1
+  ws.getCell(sumRow2, colTuần).value = 'TỔNG GIỜ LÀM TRONG THÁNG ='
+  ws.getCell(sumRow2, colTuần).font = { bold: true }
+  ws.mergeCells(sumRow2, colNgày, sumRow2, colFirstChild + CHILD_NAMES.length - 1)
+  const totalCell = ws.getCell(sumRow2, colNgày)
+  totalCell.value = totalMonth
+  totalCell.numFmt = '0.00'
+  totalCell.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFFFE0B2' }, // cam nhạt
+  }
+  totalCell.alignment = { horizontal: 'center' }
+
+  // Cột rộng
+  ws.getColumn(colTuần).width = 10
+  ws.getColumn(colNgày).width = 8
+  ws.getColumn(colThứ).width = 8
+  for (let c = 0; c < CHILD_NAMES.length; c++) ws.getColumn(colFirstChild + c).width = 12
+  ws.getColumn(colGhiChú).width = 28
+
+  // --- Sheet 2: Chi tiết ca (giữ nguyên) ---
   const wsDetail = wb.addWorksheet('Chi tiết', { views: [{ state: 'frozen', ySplit: 1 }] })
   wsDetail.columns = [
     { header: 'Ngày', key: 'date', width: 12 },
@@ -107,7 +197,6 @@ export async function exportMonthToExcel(doc: MonthDoc): Promise<Blob> {
         type: SHIFT_TYPE_LABELS[s.type],
         note: s.note || '',
       })
-      // Highlight dòng chi tiết (ngày có ca)
       const row = wsDetail.getRow(detailRowIndex)
       row.eachCell((cell) => {
         cell.fill = {
