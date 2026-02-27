@@ -7,20 +7,25 @@ import { cn } from '../../lib/utils'
 
 interface MonthViewProps {
   doc: MonthDoc
+  selectedDate: Date | null
   onSelectDay: (date: Date) => void
 }
 
-export function MonthView({ doc, onSelectDay }: MonthViewProps) {
+function isSameDay(a: Date, b: Date | null): boolean {
+  if (!b) return false
+  return a.getDate() === b.getDate() && a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear()
+}
+
+export function MonthView({ doc, selectedDate, onSelectDay }: MonthViewProps) {
   const year = doc.year
   const month = doc.month
   const start = startOfMonth(new Date(year, month - 1, 1))
   const end = endOfMonth(start)
   const days = eachDayOfInterval({ start, end })
 
-  // Lấp đầu tuần (để thứ 2 là cột đầu nếu cần; hoặc CN đầu: 0=CN)
-  const firstDow = getDay(start) // 0 = CN
+  const firstDow = getDay(start)
   const padStart = firstDow
-  const padEnd = 42 - days.length - padStart // 6 rows
+  const padEnd = 42 - days.length - padStart
   const padStartArr = Array.from({ length: padStart }, () => null)
   const padEndArr = Array.from({ length: Math.max(0, padEnd) }, () => null)
   const gridDays = [...padStartArr, ...days.map((d) => d), ...padEndArr]
@@ -43,52 +48,64 @@ export function MonthView({ doc, onSelectDay }: MonthViewProps) {
   })
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* Tổng kết tháng */}
-      <div className="rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-600/80 shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700/80">
-          <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+    <div className="flex flex-col gap-4">
+      {/* Card Tổng kết tháng - iOS soft card */}
+      <div
+        className={cn(
+          'rounded-[18px] overflow-hidden',
+          'bg-white/80 dark:bg-[rgba(255,255,255,0.04)]',
+          'border border-white/20 dark:border-white/[0.06]',
+          'shadow-[0_8px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.35)]'
+        )}
+      >
+        <div className="px-4 pt-4 pb-1">
+          <h2 className="text-[13px] font-medium text-slate-500 dark:text-[rgba(255,255,255,0.65)]">
             Tổng kết tháng
           </h2>
         </div>
-        <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-xs text-slate-500 dark:text-slate-400">Số ngày có làm</span>
-            <span className="text-xl font-bold text-slate-800 dark:text-white tabular-nums">
+        <div className="p-4 pt-2 grid grid-cols-2 gap-4">
+          <div className="flex flex-col gap-0">
+            <span className="text-[13px] font-medium text-slate-500 dark:text-[rgba(255,255,255,0.65)] opacity-90">
+              Ngày làm
+            </span>
+            <span className="text-[28px] sm:text-[32px] font-bold tracking-[-0.6px] text-slate-800 dark:text-[rgba(255,255,255,0.92)] tabular-nums mt-0.5">
               {workingDaysCount}
+              <span className="text-[13px] font-medium text-slate-400 dark:text-[rgba(255,255,255,0.45)] ml-1">ngày</span>
             </span>
-            <span className="text-xs text-slate-400 dark:text-slate-500">ngày</span>
           </div>
-          <div className="flex flex-col gap-0.5">
-            <span className="text-xs text-slate-500 dark:text-slate-400">Tổng số ca</span>
-            <span className="text-xl font-bold text-slate-800 dark:text-white tabular-nums">
+          <div className="flex flex-col gap-0">
+            <span className="text-[13px] font-medium text-slate-500 dark:text-[rgba(255,255,255,0.65)] opacity-90">
+              Số ca
+            </span>
+            <span className="text-[28px] sm:text-[32px] font-bold tracking-[-0.6px] text-slate-800 dark:text-[rgba(255,255,255,0.92)] tabular-nums mt-0.5">
               {totalShiftsCount}
-            </span>
-            <span className="text-xs text-slate-400 dark:text-slate-500">ca</span>
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <span className="text-xs text-slate-500 dark:text-slate-400">Tổng giờ</span>
-            <span className="text-xl font-bold text-slate-800 dark:text-white tabular-nums">
-              {formatHours(monthTotal)}
+              <span className="text-[13px] font-medium text-slate-400 dark:text-[rgba(255,255,255,0.45)] ml-1">ca</span>
             </span>
           </div>
-          {monthOt > 0 && (
-            <div className="flex flex-col gap-0.5">
-              <span className="text-xs text-amber-600 dark:text-amber-400">OT</span>
-              <span className="text-xl font-bold text-amber-600 dark:text-amber-400 tabular-nums">
-                {formatHours(monthOt)}
+          <div className="col-span-2 flex items-end justify-between gap-2 flex-wrap">
+            <div className="flex flex-col gap-0">
+              <span className="text-[13px] font-medium text-slate-500 dark:text-[rgba(255,255,255,0.65)] opacity-90">
+                Tổng giờ
+              </span>
+              <span className="text-[28px] sm:text-[34px] font-bold tracking-[-0.6px] text-slate-800 dark:text-[rgba(255,255,255,0.92)] tabular-nums mt-0.5">
+                {formatHours(monthTotal)}
               </span>
             </div>
-          )}
+            {monthOt > 0 && (
+              <span className="inline-flex items-center px-3 py-1.5 rounded-full text-[13px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400">
+                OT {formatHours(monthOt)}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Lịch tháng - gap rõ ràng cho mobile iPhone */}
-      <div className="grid grid-cols-7 gap-2 min-[480px]:gap-3">
+      {/* Lịch tháng - gap 8px, ô 54-62px */}
+      <div className="grid grid-cols-7 gap-2">
         {weekDays.map((w) => (
           <div
             key={w}
-            className="text-center text-xs font-semibold text-slate-500 dark:text-slate-400 py-2"
+            className="text-center text-[12px] font-semibold text-slate-500 dark:text-[rgba(255,255,255,0.45)] py-1.5"
           >
             {w}
           </div>
@@ -106,6 +123,7 @@ export function MonthView({ doc, onSelectDay }: MonthViewProps) {
             d.getMonth() === new Date().getMonth() &&
             d.getFullYear() === new Date().getFullYear()
           const hasShifts = shifts.length > 0
+          const isSelected = isSameDay(d, selectedDate)
 
           return (
             <button
@@ -113,36 +131,33 @@ export function MonthView({ doc, onSelectDay }: MonthViewProps) {
               type="button"
               onClick={() => onSelectDay(d)}
               className={cn(
-                'w-full min-w-0 aspect-square flex flex-col items-center justify-center rounded-xl border text-center p-1.5 transition-all duration-200 active:scale-[0.98]',
+                'w-full min-w-0 aspect-square flex flex-col items-center justify-center rounded-[14px] text-center p-1 transition-all duration-200 active:scale-[0.98]',
+                'min-h-[54px] sm:min-h-[62px]',
                 isSameMonth(d, start)
-                  ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 shadow-sm hover:shadow'
-                  : 'bg-slate-50/80 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700/50 text-slate-400',
-                hasShifts && 'border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-900/20',
-                isToday && 'ring-2 ring-offset-2 ring-slate-400 dark:ring-slate-500 ring-offset-slate-100 dark:ring-offset-slate-900'
+                  ? 'bg-white/70 dark:bg-[rgba(255,255,255,0.06)] border border-transparent hover:bg-white/90 dark:hover:bg-white/[0.09]'
+                  : 'bg-transparent dark:bg-white/[0.02] text-slate-400 dark:text-[rgba(255,255,255,0.35)]',
+                hasShifts && isSameMonth(d, start) && 'bg-emerald-50/80 dark:bg-emerald-500/10',
+                isSelected && 'ring-2 ring-slate-400 dark:ring-white/50 ring-offset-2 ring-offset-[#f0f2f5] dark:ring-offset-[#151b2d] shadow-[0_0_12px_rgba(0,0,0,0.15)] dark:shadow-[0_0_12px_rgba(255,255,255,0.08)]',
+                isToday && !isSelected && 'ring-2 ring-slate-300 dark:ring-white/40 ring-offset-2 ring-offset-[#f0f2f5] dark:ring-offset-[#151b2d]'
               )}
             >
               <span
                 className={cn(
-                  'text-sm font-semibold leading-tight',
-                  isSameMonth(d, start) ? 'text-slate-800 dark:text-white' : 'text-slate-400'
+                  'text-[16px] sm:text-[18px] font-semibold leading-tight tabular-nums',
+                  isSameMonth(d, start) ? 'text-slate-800 dark:text-[rgba(255,255,255,0.92)]' : 'text-slate-400 dark:text-[rgba(255,255,255,0.35)]'
                 )}
               >
                 {format(d, 'd')}
               </span>
               {hasShifts && (
-                <>
-                  <span className="text-[11px] font-medium text-slate-600 dark:text-slate-300 mt-1 leading-tight block">
-                    {formatHours(totalM)}
-                  </span>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                    {shifts.length} ca
-                  </span>
-                  {otM > 0 && (
-                    <span className="text-[9px] bg-amber-200/80 text-amber-900 dark:bg-amber-900/50 dark:text-amber-200 px-1.5 py-0.5 rounded-full mt-0.5 font-medium">
-                      OT
-                    </span>
-                  )}
-                </>
+                <span className="text-[10px] sm:text-[11px] font-medium text-slate-600 dark:text-[rgba(255,255,255,0.65)] mt-0.5 leading-tight block">
+                  {shifts.length} ca • {formatHours(totalM)}
+                </span>
+              )}
+              {hasShifts && otM > 0 && (
+                <span className="text-[9px] bg-amber-200/80 dark:bg-amber-500/25 text-amber-800 dark:text-amber-400 px-1 rounded mt-0.5 font-medium">
+                  OT
+                </span>
               )}
             </button>
           )

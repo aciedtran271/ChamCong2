@@ -12,6 +12,8 @@ export default {
       boxShadow: {
         card: '0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.08)',
         cardHover: '0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.08)',
+        ios: '0 8px 24px rgba(0,0,0,0.25)',
+        glow: '0 0 0 2px rgba(255,255,255,0.3)',
       },
     },
   },

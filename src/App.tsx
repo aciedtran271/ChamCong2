@@ -200,36 +200,43 @@ function App() {
 
   const monthTitle = `${year} - Tháng ${month}`
 
+  const handleFabAdd = useCallback(() => {
+    const today = new Date()
+    const inCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month
+    setSelectedDate(inCurrentMonth ? today : new Date(year, month - 1, 1))
+    setFormShift(null)
+  }, [year, month])
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-100 to-slate-200/80 dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-white">
-      <header className="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-700/80 shadow-sm safe-area-inset-top">
-        <div className="flex items-center justify-between gap-2 px-4 py-3">
-          <div className="flex items-center gap-1">
+    <div className="min-h-screen bg-[#f0f2f5] dark:bg-gradient-to-b dark:from-[#0c1222] dark:to-[#151b2d] text-slate-900 dark:text-[rgba(255,255,255,0.92)]">
+      <header className="sticky top-0 z-30 header-ios flex flex-col bg-white/95 dark:bg-[rgba(28,33,48,0.95)] backdrop-blur-xl border-b border-white/10 dark:border-white/[0.06]">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-0">
             <button
               type="button"
               onClick={goPrev}
-              className="min-h-touch min-w-[44px] rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-slate-200 dark:active:bg-slate-700 transition-colors"
+              className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-slate-600 dark:text-[rgba(255,255,255,0.65)] hover:bg-slate-100 dark:hover:bg-white/10 active:scale-[0.98] transition-all"
               aria-label="Tháng trước"
             >
               ‹
             </button>
-            <h1 className="text-lg font-bold min-w-[128px] text-center text-slate-800 dark:text-white">
+            <h1 className="text-[20px] sm:text-[22px] font-semibold tracking-[-0.2px] min-w-[120px] text-center text-slate-800 dark:text-[rgba(255,255,255,0.92)]">
               {monthTitle}
             </h1>
             <button
               type="button"
               onClick={goNext}
-              className="min-h-touch min-w-[44px] rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-slate-200 dark:active:bg-slate-700 transition-colors"
+              className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-slate-600 dark:text-[rgba(255,255,255,0.65)] hover:bg-slate-100 dark:hover:bg-white/10 active:scale-[0.98] transition-all"
               aria-label="Tháng sau"
             >
               ›
             </button>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0">
             <button
               type="button"
               onClick={handleExportExcel}
-              className="min-h-touch min-w-[44px] rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-slate-600 dark:text-[rgba(255,255,255,0.65)] hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
               title="Xuất Excel"
             >
               📥
@@ -237,7 +244,7 @@ function App() {
             <button
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
-              className="min-h-touch min-w-[44px] rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-slate-600 dark:text-[rgba(255,255,255,0.65)] hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
               aria-label="Menu"
             >
               ⋮
@@ -248,7 +255,7 @@ function App() {
         {menuOpen && (
           <>
             <div className="fixed inset-0 z-0" onClick={() => setMenuOpen(false)} aria-hidden />
-            <div className="absolute right-4 top-full mt-2 py-2 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 min-w-[200px] z-10">
+            <div className="absolute right-4 top-full mt-2 py-2 bg-white dark:bg-[rgba(28,33,48,0.98)] rounded-[18px] shadow-ios border border-white/10 dark:border-white/[0.06] min-w-[200px] z-10">
             <button
               type="button"
               onClick={() => { setShowExportNamesEditor(true); setMenuOpen(false); }}
@@ -283,20 +290,35 @@ function App() {
         )}
       </header>
 
-      <main className="px-4 py-5 pb-28 max-w-2xl mx-auto">
+      <main className="px-4 py-4 pb-24 max-w-2xl mx-auto">
         {loading ? (
           <div className="animate-pulse space-y-4">
-            <div className="h-32 bg-slate-200/80 dark:bg-slate-700/80 rounded-2xl" />
-            <div className="grid grid-cols-7 gap-1.5">
+            <div className="h-28 rounded-[18px] bg-white/60 dark:bg-white/[0.04]" />
+            <div className="grid grid-cols-7 gap-2">
               {Array.from({ length: 35 }).map((_, i) => (
-                <div key={i} className="aspect-square bg-slate-200/80 dark:bg-slate-700/80 rounded-xl" />
+                <div key={i} className="aspect-square rounded-[14px] bg-white/60 dark:bg-white/[0.04]" />
               ))}
             </div>
           </div>
         ) : (
-          <MonthView doc={doc} onSelectDay={handleSelectDay} />
+          <MonthView
+            doc={doc}
+            selectedDate={selectedDate}
+            onSelectDay={handleSelectDay}
+          />
         )}
       </main>
+
+      {/* FAB + Ca - iOS style, trên safe-area */}
+      <button
+        type="button"
+        onClick={handleFabAdd}
+        className="fixed right-4 z-20 w-14 h-14 min-w-[56px] min-h-[56px] rounded-full bg-slate-800 dark:bg-white shadow-ios flex items-center justify-center text-white dark:text-slate-900 font-semibold text-lg active:scale-[0.96] transition-transform"
+        style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
+        aria-label="Thêm ca"
+      >
+        + Ca
+      </button>
 
       {selectedDate && (
         <>

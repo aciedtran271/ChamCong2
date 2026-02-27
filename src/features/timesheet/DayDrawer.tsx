@@ -39,10 +39,10 @@ export function DayDrawer({
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-black/40" onClick={onClose}>
       <div
-        className="mt-auto bg-white dark:bg-slate-900 rounded-t-2xl shadow-xl max-h-[85vh] flex flex-col"
+        className="mt-auto bg-white dark:bg-[#1c2130] rounded-t-[20px] shadow-[0_-8px_32px_rgba(0,0,0,0.2)] max-h-[78vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+        <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-white/[0.06]">
           <div>
             <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
               {dateStr} – {dayName}
