@@ -43,9 +43,11 @@ export async function exportMonthToExcel(doc: MonthDoc): Promise<Blob> {
   }
   const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']
   const dates = allDatesInMonth(doc.year, doc.month)
+  const summaryHasShifts: boolean[] = []
   for (const d of dates) {
     const key = dateKey(d)
     const shifts = doc.days[key] ?? []
+    summaryHasShifts.push(shifts.length > 0)
     const totalM = totalMinutes(shifts)
     const otM = otMinutes(shifts)
     const notes = shifts.map((s) => s.note).filter(Boolean).join('; ') || ''
@@ -57,6 +59,18 @@ export async function exportMonthToExcel(doc: MonthDoc): Promise<Blob> {
       shiftCount: shifts.length,
       notes,
     })
+  }
+  // Highlight các ngày có ca làm (sheet Tổng hợp)
+  const highlightFill = {
+    type: 'pattern' as const,
+    pattern: 'solid' as const,
+    fgColor: { argb: 'FFE8F5E9' }, // xanh lá nhạt
+  }
+  for (let i = 0; i < summaryHasShifts.length; i++) {
+    if (summaryHasShifts[i]) {
+      const row = wsSummary.getRow(i + 2)
+      row.eachCell((cell) => { cell.fill = highlightFill })
+    }
   }
 
   // Sheet 2: Chi tiết ca
@@ -78,6 +92,7 @@ export async function exportMonthToExcel(doc: MonthDoc): Promise<Blob> {
     fgColor: { argb: 'FFE2E8F0' },
   }
 
+  let detailRowIndex = 2
   for (const d of dates) {
     const key = dateKey(d)
     const shifts = doc.days[key] ?? []
@@ -92,6 +107,16 @@ export async function exportMonthToExcel(doc: MonthDoc): Promise<Blob> {
         type: SHIFT_TYPE_LABELS[s.type],
         note: s.note || '',
       })
+      // Highlight dòng chi tiết (ngày có ca)
+      const row = wsDetail.getRow(detailRowIndex)
+      row.eachCell((cell) => {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFE8F5E9' },
+        }
+      })
+      detailRowIndex += 1
     }
   }
 
