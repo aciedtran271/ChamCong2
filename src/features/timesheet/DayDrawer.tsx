@@ -1,5 +1,6 @@
 import { format } from 'date-fns'
 import type { Shift } from '../../types'
+import { getExportColumnNames } from './storage'
 import { shiftDurationMinutes, otMinutes, totalMinutes, SHIFT_TYPE_LABELS } from './calc'
 import { formatHours } from '../../lib/utils'
 import { cn } from '../../lib/utils'
@@ -31,6 +32,7 @@ export function DayDrawer({
 }: DayDrawerProps) {
   const totalM = totalMinutes(shifts)
   const otM = otMinutes(shifts)
+  const columnNames = getExportColumnNames()
   const dateStr = format(date, 'dd/MM/yyyy')
   const dayName = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][date.getDay()]
 
@@ -84,6 +86,11 @@ export function DayDrawer({
                       >
                         {SHIFT_TYPE_LABELS[s.type]}
                       </span>
+                      {columnNames.length > 0 && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200">
+                          {columnNames[Math.min(Math.max(0, s.columnIndex ?? 0), columnNames.length - 1)]}
+                        </span>
+                      )}
                     </div>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                       {formatHoursFn(dur)} {s.breakMinutes > 0 && `(nghỉ ${s.breakMinutes}p)`}

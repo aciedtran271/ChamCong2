@@ -65,22 +65,30 @@ export async function exportMonthToExcel(doc: MonthDoc, childNames: string[]): P
   const dataStartRow = 3
   const totalHoursPerDay: number[] = []
   const sumsPerChild = names.map(() => 0)
+  const countPerChild = names.map(() => 0)
 
   for (let i = 0; i < dates.length; i++) {
     const d = dates[i]
     const key = dateKey(d)
     const shifts = doc.days[key] ?? []
-    const totalM = totalMinutes(shifts)
-    const hours = minutesToHours(totalM)
-    totalHoursPerDay.push(hours)
     const notes = shifts.map((s) => s.note).filter(Boolean).join('; ') || ''
 
-    sumsPerChild[0] += hours
+    const hoursPerColumn = names.map(() => 0)
+    for (const s of shifts) {
+      const col = Math.min(
+        Math.max(0, s.columnIndex ?? 0),
+        names.length - 1
+      )
+      const h = minutesToHours(shiftDurationMinutes(s))
+      hoursPerColumn[col] += h
+      sumsPerChild[col] += h
+      countPerChild[col] += 1
+    }
+    totalHoursPerDay.push(hoursPerColumn.reduce((a, b) => a + b, 0))
 
     const row = ws.getRow(dataStartRow + i)
     const weekNum = Math.floor(i / 7) + 1
-    const childValues = names.map((_, c) => (c === 0 ? hours : 0))
-    row.values = [`Tuần ${weekNum}`, d.getDate(), DAY_NAMES_VI[getDay(d)], ...childValues, notes]
+    row.values = [`Tuần ${weekNum}`, d.getDate(), DAY_NAMES_VI[getDay(d)], ...hoursPerColumn, notes]
     row.getCell(colNgày).numFmt = '0'
     for (let c = 0; c < names.length; c++) {
       row.getCell(colFirstChild + c).numFmt = '0.00'
@@ -126,8 +134,22 @@ export async function exportMonthToExcel(doc: MonthDoc, childNames: string[]): P
     }
   }
 
+  const sumRow1b = sumRow1 + 1
+  ws.getCell(sumRow1b, colTuần).value = 'SỐ CA MỖI TRẺ:'
+  ws.getCell(sumRow1b, colTuần).font = { bold: true }
+  for (let c = 0; c < names.length; c++) {
+    const cell = ws.getCell(sumRow1b, colFirstChild + c)
+    cell.value = countPerChild[c]
+    cell.numFmt = '0'
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE1F5FE' },
+    }
+  }
+
   const totalMonth = totalHoursPerDay.reduce((a, b) => a + b, 0)
-  const sumRow2 = sumRow1 + 1
+  const sumRow2 = sumRow1b + 1
   ws.getCell(sumRow2, colTuần).value = 'TỔNG GIỜ LÀM TRONG THÁNG ='
   ws.getCell(sumRow2, colTuần).font = { bold: true }
   ws.mergeCells(sumRow2, colNgày, sumRow2, colFirstChild + names.length - 1)

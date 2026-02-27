@@ -9,6 +9,8 @@ export interface Shift {
   type: ShiftType
   note: string
   location?: string
+  /** Chỉ số cột (trẻ) khi xuất Excel, 0-based. Mặc định 0. */
+  columnIndex?: number
 }
 
 export interface MonthDoc {

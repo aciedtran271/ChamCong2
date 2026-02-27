@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Shift, ShiftType } from '../../types'
+import { getExportColumnNames } from './storage'
 import { SHIFT_TYPE_LABELS, isLongShift } from './calc'
 import { cn } from '../../lib/utils'
 
@@ -25,6 +26,12 @@ export function ShiftForm({ initial, dateLabel, onSave, onCancel }: ShiftFormPro
   const [type, setType] = useState<ShiftType>(initial?.type ?? 'Work')
   const [note, setNote] = useState(initial?.note ?? '')
   const [location, setLocation] = useState(initial?.location ?? '')
+  const columnNames = getExportColumnNames()
+  const [columnIndex, setColumnIndex] = useState(
+    initial?.columnIndex !== undefined && initial.columnIndex >= 0 && initial.columnIndex < columnNames.length
+      ? initial.columnIndex
+      : 0
+  )
 
   const draft: Shift = {
     id: initial?.id ?? crypto.randomUUID(),
@@ -34,6 +41,7 @@ export function ShiftForm({ initial, dateLabel, onSave, onCancel }: ShiftFormPro
     type,
     note: note.trim(),
     location: location.trim() || undefined,
+    columnIndex: columnIndex >= 0 && columnIndex < columnNames.length ? columnIndex : 0,
   }
 
   const longWarning = isLongShift(draft)
@@ -74,6 +82,21 @@ export function ShiftForm({ initial, dateLabel, onSave, onCancel }: ShiftFormPro
           className="min-h-touch rounded-cardSm border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 text-base"
         />
       </label>
+
+      <div>
+        <span className="text-sm text-slate-600 dark:text-slate-300 block mb-2">Thuộc cột (trẻ)</span>
+        <select
+          value={columnIndex}
+          onChange={(e) => setColumnIndex(Number(e.target.value))}
+          className="w-full min-h-touch rounded-cardSm border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 text-base"
+        >
+          {columnNames.map((name, idx) => (
+            <option key={idx} value={idx}>
+              {name || `Cột ${idx + 1}`}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <div>
         <span className="text-sm text-slate-600 dark:text-slate-300 block mb-2">Loại ca</span>
