@@ -5,9 +5,10 @@ import { DayDrawer } from './features/timesheet/DayDrawer'
 import { ShiftForm } from './features/timesheet/ShiftForm'
 import { useMonthDoc } from './hooks/useMonthDoc'
 import { exportMonthToExcel, excelFileName } from './features/timesheet/exportExcel'
-import { exportAllMonthsJson, importMonthsJson, removeMonth } from './features/timesheet/storage'
+import { exportAllMonthsJson, importMonthsJson, removeMonth, getExportColumnNames } from './features/timesheet/storage'
 import type { Shift } from './types'
 import { Toast } from './components/Toast'
+import { ExportNamesEditor } from './components/ExportNamesEditor'
 
 function App() {
   const [year, setYear] = useState(() => new Date().getFullYear())
@@ -17,6 +18,7 @@ function App() {
   const [toast, setToast] = useState<{ message: string; undo?: () => void } | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [importing, setImporting] = useState(false)
+  const [showExportNamesEditor, setShowExportNamesEditor] = useState(false)
 
   const {
     doc,
@@ -124,7 +126,8 @@ function App() {
 
   const handleExportExcel = useCallback(async () => {
     try {
-      const blob = await exportMonthToExcel(doc)
+      const childNames = getExportColumnNames()
+      const blob = await exportMonthToExcel(doc, childNames)
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -246,6 +249,13 @@ function App() {
             <div className="absolute right-4 top-full mt-1 py-2 bg-white dark:bg-slate-800 rounded-card shadow-card border border-slate-200 dark:border-slate-700 min-w-[180px] z-10">
             <button
               type="button"
+              onClick={() => { setShowExportNamesEditor(true); setMenuOpen(false); }}
+              className="w-full text-left px-4 py-2 min-h-touch text-sm hover:bg-slate-100 dark:hover:bg-slate-700"
+            >
+              Tên cột bảng chấm công
+            </button>
+            <button
+              type="button"
               onClick={() => { handleExportJson(); setMenuOpen(false); }}
               className="w-full text-left px-4 py-2 min-h-touch text-sm hover:bg-slate-100 dark:hover:bg-slate-700"
             >
@@ -320,6 +330,13 @@ function App() {
           message={toast.message}
           action={toast.undo ? { label: 'Hoàn tác', onClick: toast.undo } : undefined}
           onClose={() => setToast(null)}
+        />
+      )}
+
+      {showExportNamesEditor && (
+        <ExportNamesEditor
+          onClose={() => setShowExportNamesEditor(false)}
+          onSaved={() => setToast({ message: 'Đã lưu tên cột.' })}
         />
       )}
     </div>

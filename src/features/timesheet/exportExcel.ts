@@ -11,7 +11,6 @@ import {
 } from './calc'
 
 const TITLE_PREFIX = 'AN HY'
-const CHILD_NAMES = ['Bi', 'Phú Quý', 'Khôi', 'Bo']
 const DAY_NAMES_VI = ['CN', 'Hai', 'Ba', 'Tư', 'Năm', 'Sáu', 'Bảy'] // 0=CN, 1=Hai, ...
 
 function allDatesInMonth(year: number, month: number): Date[] {
@@ -24,7 +23,9 @@ function allDatesInMonth(year: number, month: number): Date[] {
   return out
 }
 
-export async function exportMonthToExcel(doc: MonthDoc): Promise<Blob> {
+/** childNames: tên các cột do người dùng nhập (lấy từ getExportColumnNames() nếu không truyền) */
+export async function exportMonthToExcel(doc: MonthDoc, childNames: string[]): Promise<Blob> {
+  const names = childNames.length > 0 ? childNames : ['Bi', 'Phú Quý', 'Khôi', 'Bo']
   const wb = new ExcelJS.Workbook()
   wb.creator = 'ChamCong App'
 
@@ -37,12 +38,11 @@ export async function exportMonthToExcel(doc: MonthDoc): Promise<Blob> {
   // --- Sheet 1: Bảng chấm công theo mẫu AN HY ---
   const ws = wb.addWorksheet('Chấm công', { views: [{ state: 'frozen', ySplit: 2 }] })
 
-  // Cột: A=Tuần, B=Ngày, C=Thứ, D=Bi, E=Phú Quý, F=Khôi, G=Bo, H=Ghi chú
   const colTuần = 1
   const colNgày = 2
   const colThứ = 3
   const colFirstChild = 4
-  const colGhiChú = 4 + CHILD_NAMES.length // 8
+  const colGhiChú = 4 + names.length
 
   // Row 1: Tiêu đề
   const title = `${TITLE_PREFIX} - BẢNG CHẤM CÔNG THÁNG ${monthName} NĂM ${year}`
@@ -52,9 +52,9 @@ export async function exportMonthToExcel(doc: MonthDoc): Promise<Blob> {
   titleCell.font = { bold: true, size: 14 }
   titleCell.alignment = { horizontal: 'center' }
 
-  // Row 2: Header
+  // Row 2: Header (tên cột do người dùng nhập)
   const headerRow = ws.getRow(2)
-  headerRow.values = ['Tuần', 'Ngày', 'Thứ', ...CHILD_NAMES, 'Ghi chú']
+  headerRow.values = ['Tuần', 'Ngày', 'Thứ', ...names, 'Ghi chú']
   headerRow.font = { bold: true }
   headerRow.fill = {
     type: 'pattern',
@@ -62,11 +62,9 @@ export async function exportMonthToExcel(doc: MonthDoc): Promise<Blob> {
     fgColor: { argb: 'FFE2E8F0' },
   }
 
-  // Data rows: mỗi ngày một dòng
   const dataStartRow = 3
   const totalHoursPerDay: number[] = []
-  const childColumns = [0, 1, 2, 3] // Bi, Phú Quý, Khôi, Bo - tổng giờ mỗi cột (chỉ cột 0 dùng từ app)
-  const sumsPerChild = [0, 0, 0, 0]
+  const sumsPerChild = names.map(() => 0)
 
   for (let i = 0; i < dates.length; i++) {
     const d = dates[i]
@@ -77,26 +75,16 @@ export async function exportMonthToExcel(doc: MonthDoc): Promise<Blob> {
     totalHoursPerDay.push(hours)
     const notes = shifts.map((s) => s.note).filter(Boolean).join('; ') || ''
 
-    // Cột Bi = tổng giờ ngày đó (dữ liệu app); Phú Quý, Khôi, Bo = 0
     sumsPerChild[0] += hours
 
     const row = ws.getRow(dataStartRow + i)
     const weekNum = Math.floor(i / 7) + 1
-    row.values = [
-      `Tuần ${weekNum}`,
-      d.getDate(),
-      DAY_NAMES_VI[getDay(d)],
-      hours,
-      0,
-      0,
-      0,
-      notes,
-    ]
+    const childValues = names.map((_, c) => (c === 0 ? hours : 0))
+    row.values = [`Tuần ${weekNum}`, d.getDate(), DAY_NAMES_VI[getDay(d)], ...childValues, notes]
     row.getCell(colNgày).numFmt = '0'
-    row.getCell(colFirstChild).numFmt = '0.00'
-    row.getCell(colFirstChild + 1).numFmt = '0.00'
-    row.getCell(colFirstChild + 2).numFmt = '0.00'
-    row.getCell(colFirstChild + 3).numFmt = '0.00'
+    for (let c = 0; c < names.length; c++) {
+      row.getCell(colFirstChild + c).numFmt = '0.00'
+    }
 
     if (shifts.length > 0) {
       row.eachCell((cell) => {
@@ -109,7 +97,6 @@ export async function exportMonthToExcel(doc: MonthDoc): Promise<Blob> {
     }
   }
 
-  // Gộp ô cột Tuần theo từng tuần (7 ngày = 1 tuần)
   for (let w = 0; w < Math.ceil(numDays / 7); w++) {
     const startR = dataStartRow + w * 7
     const endR = Math.min(dataStartRow + (w + 1) * 7, dataStartRow + numDays) - 1
@@ -119,48 +106,45 @@ export async function exportMonthToExcel(doc: MonthDoc): Promise<Blob> {
       cell.fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: 'FFB3E5FC' }, // xanh dương nhạt
+        fgColor: { argb: 'FFB3E5FC' },
       }
       cell.alignment = { vertical: 'middle', horizontal: 'center' }
     }
   }
 
-  // Dòng tổng: TỔNG GIỜ HỌC MỖI TRẺ
   const sumRow1 = dataStartRow + numDays
   ws.getCell(sumRow1, colTuần).value = 'TỔNG GIỜ HỌC MỖI TRẺ:'
   ws.getCell(sumRow1, colTuần).font = { bold: true }
-  for (let c = 0; c < CHILD_NAMES.length; c++) {
+  for (let c = 0; c < names.length; c++) {
     const cell = ws.getCell(sumRow1, colFirstChild + c)
     cell.value = sumsPerChild[c]
     cell.numFmt = '0.00'
     cell.fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FFC8E6C9' }, // xanh lá nhạt
+      fgColor: { argb: 'FFC8E6C9' },
     }
   }
 
-  // Dòng tổng: TỔNG GIỜ LÀM TRONG THÁNG
   const totalMonth = totalHoursPerDay.reduce((a, b) => a + b, 0)
   const sumRow2 = sumRow1 + 1
   ws.getCell(sumRow2, colTuần).value = 'TỔNG GIỜ LÀM TRONG THÁNG ='
   ws.getCell(sumRow2, colTuần).font = { bold: true }
-  ws.mergeCells(sumRow2, colNgày, sumRow2, colFirstChild + CHILD_NAMES.length - 1)
+  ws.mergeCells(sumRow2, colNgày, sumRow2, colFirstChild + names.length - 1)
   const totalCell = ws.getCell(sumRow2, colNgày)
   totalCell.value = totalMonth
   totalCell.numFmt = '0.00'
   totalCell.fill = {
     type: 'pattern',
     pattern: 'solid',
-    fgColor: { argb: 'FFFFE0B2' }, // cam nhạt
+    fgColor: { argb: 'FFFFE0B2' },
   }
   totalCell.alignment = { horizontal: 'center' }
 
-  // Cột rộng
   ws.getColumn(colTuần).width = 10
   ws.getColumn(colNgày).width = 8
   ws.getColumn(colThứ).width = 8
-  for (let c = 0; c < CHILD_NAMES.length; c++) ws.getColumn(colFirstChild + c).width = 12
+  for (let c = 0; c < names.length; c++) ws.getColumn(colFirstChild + c).width = 12
   ws.getColumn(colGhiChú).width = 28
 
   // --- Sheet 2: Chi tiết ca (giữ nguyên) ---

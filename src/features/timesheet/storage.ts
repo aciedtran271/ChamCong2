@@ -32,6 +32,27 @@ export async function exportAllMonthsJson(): Promise<string> {
   return JSON.stringify(out, null, 2)
 }
 
+const EXPORT_NAMES_KEY = 'chamcong:exportColumnNames'
+const DEFAULT_EXPORT_NAMES = ['Bi', 'Phú Quý', 'Khôi', 'Bo']
+
+/** Tên các cột "tên trẻ" trong Excel do người dùng nhập */
+export function getExportColumnNames(): string[] {
+  try {
+    const raw = localStorage.getItem(EXPORT_NAMES_KEY)
+    if (!raw) return [...DEFAULT_EXPORT_NAMES]
+    const arr = JSON.parse(raw) as unknown
+    if (!Array.isArray(arr) || arr.some((x) => typeof x !== 'string')) return [...DEFAULT_EXPORT_NAMES]
+    return arr.length > 0 ? arr : [...DEFAULT_EXPORT_NAMES]
+  } catch {
+    return [...DEFAULT_EXPORT_NAMES]
+  }
+}
+
+export function setExportColumnNames(names: string[]): void {
+  const safe = names.length > 0 ? names.map((s) => String(s).trim() || ' ') : [...DEFAULT_EXPORT_NAMES]
+  localStorage.setItem(EXPORT_NAMES_KEY, JSON.stringify(safe))
+}
+
 /** Import JSON backup (merge vào store) */
 export async function importMonthsJson(json: string): Promise<{ count: number }> {
   const data = JSON.parse(json) as Record<string, MonthDoc>
