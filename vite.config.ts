@@ -36,7 +36,8 @@ export default defineConfig({
         scope: base,
         start_url: base,
         icons: [
-          { src: base + 'favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' },
+          { src: base + 'icon.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: base + 'icon.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
         ],
       },
       devOptions: { enabled: true },
